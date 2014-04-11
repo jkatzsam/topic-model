@@ -22,18 +22,6 @@ I need a better way to filter out articles.
 
 import os, json, time, argparse
 import xml.etree.ElementTree as ET
-from xmlutils.xml2json import xml2json
-
-#parse arguments
-parser = argparse.ArgumentParser(description='Process year and a list of keywords')
-parser.add_argument('year', metavar='year', type=str, nargs=1,
-                   help='a year string between 1987 and 2007')
-parser.add_argument('keywords', metavar='keywords', type=str, nargs='+',
-                   help='A collection of keywords')
-
-args = parser.parse_args()
-year = args.year[0]
-keywords = args.keywords
 
 ###helper classes
 
@@ -107,7 +95,7 @@ class decode_xml:
                                     continue
                                 
 
-if __name__ == "__main__":
+def convert_files(year, keywords)
     start_time = time.time()
     #Step 1: Convert all files in folder to json format 
 
@@ -183,6 +171,20 @@ if __name__ == "__main__":
                             json.dump(article_data, outfile)
                         break
 
+if if __name__ == "__main__":
+    #parse arguments
+    parser = argparse.ArgumentParser(description='Process year and a list of keywords')
+    parser.add_argument('year', metavar='year', type=str, nargs=1,
+                       help='a year string between 1987 and 2007')
+    parser.add_argument('keywords', metavar='keywords', type=str, nargs='+',
+                       help='A collection of keywords')
+
+    args = parser.parse_args()
+    year = args.year[0]
+    keywords = args.keywords
+
+    #convert_files
+    convert_files(year, keywords)
   
     
 ###Testing Code
