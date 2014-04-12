@@ -269,7 +269,7 @@ def write_tuples(year, article_data_stripped):
     ofile.close()
 
 
-if __name__ == "main":
+if __name__ == "__main__":
     #parse arguments to get year and keywords
     parser = argparse.ArgumentParser(description='Process year and a list of keywords')
     parser.add_argument('year', metavar='year', type=str, nargs=1,
@@ -287,6 +287,6 @@ if __name__ == "main":
     #grab data for tuples
     article_data = create_tuples(year, uni_keywords)
     #write data for tuples
-    write_tuples(article_data)
+    write_tuples(year, article_data)
 
 

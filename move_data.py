@@ -28,7 +28,7 @@ def move_data(year)
     
 os.chdir(code_path)
 
-if __name__ = "main":
+if __name__ == "__main__":
 	year = sys.argv[1]
 
 	#move data

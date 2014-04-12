@@ -171,7 +171,7 @@ def convert_files(year, keywords)
                             json.dump(article_data, outfile)
                         break
 
-if if __name__ == "__main__":
+if __name__ == "__main__":
     #parse arguments
     parser = argparse.ArgumentParser(description='Process year and a list of keywords')
     parser.add_argument('year', metavar='year', type=str, nargs=1,

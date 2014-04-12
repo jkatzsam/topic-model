@@ -106,7 +106,7 @@ def parsed_text_to_json(year):
         with open(output_path + '_data' + '.json', 'wb') as outfile:
             json.dump(article_data, outfile)
     
-if __name__ == "main":
+if __name__ == "__main__":
     #specify year to have certain files to parse. 
     year = sys.argv[1]
     #convert parsed text to json

@@ -24,6 +24,7 @@ class Corpus:
 		self.file = file
 		self.stop_words_file = stop_words_file
 		self.data = []
+		self.triples = []
 		self.filtered_data = [] #TODO QUESTION: is this adding too much to class? 
 		self.matrix = np.zeros((1,1))
 		self.col_doc_map = {} #map from columns of matrix to document ids
@@ -61,66 +62,34 @@ class Corpus:
 				self.words_not_wanted.extend(row)
 
 
-	def filter_data(self):
+	def create_triples(self):
 		"""
 		Only keep tuples of certain syntatic types; extract
 		word that is not Kerry from data
 		"""
+		#counters for number of unique words and documents
+		word_counter = collections.Counter()
+		doc_counter = collections.Counter()
 		for elt in self.data:
 			tup, doc_id = ast.literal_eval(elt[3]), elt[7]
 			#grab tuples of specific syntatic types
 			if containment(self.syn_types, tup):
-				#grab the word that is not Kerry
+				#grab the word that is not among words I don't want
 				#make into LOWERCASE string (from unicode)
 				#make the doc_id an int to sort the list later
-				tup_1 = str(tup[1]).lower()
-				tup_2 = str(tup[2]).lower()
-				if tup_1 not in self.words_not_wanted:
-					self.filtered_data.append([tup_1, int(doc_id)]) 
-				if tup_2 not in self.words_not_wanted:
-					self.filtered_data.append([tup_2, int(doc_id)])
-		#sort filtered data list
-		self.filtered_data.sort(key = lambda x: x[1])
-
-
-	def create_matrix_data_map(self):
-		"""
-		COunts the number of distinct words, distinct
-		articles and forms the matrix_data_map for the
-		words and documents
-		"""
-		#count vocab and doc size
-		word_counter = collections.Counter()
-		doc_counter = collections.Counter()
-		for word, doc_id in self.filtered_data:
-			word_counter[word] += 1
-			doc_counter[doc_id] += 1
+				word_1 = str(tup[1]).lower()
+				word_2 = str(tup[2]).lower()
+				if word_1 not in self.words_not_wanted:
+					self.triples.append([(word_1, doc_id, 0)])
+					word_counter[word_1] += 1
+					doc_counter[doc_id] += 1
+				if word_2 not in self.words_not_wanted:
+					self.triples.append([(word_2, doc_id, 0)])
+					word_counter[word_2] += 1
+					doc_counter[doc_id] += 1
 		self.vocab_size = len(word_counter)
 		self.doc_size = len(doc_counter)
 
-		#create map
-		words = word_counter.keys()
-		docs = doc_counter.keys()
-
-		incrementer = 0
-		for doc in docs:
-			self.col_doc_map[incrementer] = doc
-			self.doc_col_map[doc] = incrementer
-			incrementer += 1
-
-		incrementer = 0
-		for word in words:
-			self.row_word_map[incrementer] = word
-			self.word_row_map[word] = incrementer
-			incrementer += 1
-
-
-	def create_matrix(self):
-		self.matrix = np.zeros((self.vocab_size, self.doc_size))
-		for word, doc in self.filtered_data:
-			row = self.word_row_map[word]
-			col = self.doc_col_map[doc]
-			self.matrix[row, col] = 1
 
 
 
@@ -140,6 +109,5 @@ if __name__ == "__main__":
 
 	test = Corpus(file_path, stop_words_path)
 	test.read_data()
-	test.filter_data()
-	test.create_matrix_data_map()
-	test.create_matrix()
+	test.create_triples()
+

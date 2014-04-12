@@ -72,7 +72,7 @@ def parse_text_files(year):
 	os.chdir(code_path)
 
 
-if __name__ == "main":
+if __name__ == "__main__":
 	#Specify year to have certain files to parse. 
 	year = sys.argv[1]
 	#parse text files

@@ -233,15 +233,16 @@ def select_model(topics_list, data_matrix):
 
 
 ##Development Testing
-file_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Data/test_data/tuples_v1.csv"
-out_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Code/topic_model_data/topic_model_data_v1.csv"
-stop_words_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Code/common-english-words.csv"
+if __name__ == "__main__":
+	file_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Data/test_data/tuples_v1.csv"
+	out_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Code/topic_model_data/topic_model_data_v1.csv"
+	stop_words_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Code/common-english-words.csv"
 
-test = Corpus(file_path, stop_words_path)
-test.read_data()
-test.filter_data()
-test.create_matrix_data_map()
-test.create_matrix()
+	test = Corpus(file_path, stop_words_path)
+	test.read_data()
+	test.filter_data()
+	test.create_matrix_data_map()
+	test.create_matrix()
 
 
 #object tests
@@ -286,10 +287,10 @@ test.create_matrix()
 
 
 # #model selection tests
-topics_to_check = map(lambda x: x + 2 , range(15))
-model_select_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Code/topic_model_data/model_selection_data_v1.csv"
-model_select_data = select_model(topics_to_check, test.matrix)
-save_data(model_select_data, model_select_path, ["number of topics", "log_likelihood"])
+	topics_to_check = map(lambda x: x + 2 , range(15))
+	model_select_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Code/topic_model_data/model_selection_data_v1.csv"
+	model_select_data = select_model(topics_to_check, test.matrix)
+	save_data(model_select_data, model_select_path, ["number of topics", "log_likelihood"])
 
 
 
