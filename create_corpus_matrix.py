@@ -162,4 +162,5 @@ if __name__ == "__main__":
 	test.read_data()
 	test.create_triples()
 	test.create_matrix()
+	
 
