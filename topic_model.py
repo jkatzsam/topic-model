@@ -219,7 +219,7 @@ class TopicModel:
 
 
 ##Functions
-def select_model(topics_list, data_matrix, outpath, num_iterations=10000, burn = 1000, lag = 50):
+def select_model(topics_list, data_matrix, outpath, num_iterations = 5000, burn = 750, lag = 50):
 	"""
 	Input: 
 		list of topic numbers to test

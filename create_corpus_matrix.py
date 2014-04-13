@@ -8,7 +8,7 @@ corpus.
 
 #modules
 import numpy as np
-import csv, ast, collections
+import csv, ast, collections, dateutil.parser, datetime
 
 #helper functions
 def containment(l1, l2):
@@ -45,6 +45,8 @@ class Corpus:
 								"mr.",
 								"w.",
 								"kittles"]
+		self.docid_date_map = {} #doc_id as key, date as value
+
 
 	def read_data(self):
 		"""
@@ -146,9 +148,20 @@ class Corpus:
 		for word, doc, topic in self.triples_id:
 			self.matrix[word, doc] += 1
 
+
 	def word_variance(self):
 		return np.var(self.matrix, 1)
 
+
+	def create_docid_date_map(self):
+		self.date_docid_map = []
+		for datum in self.data:
+			doc, unparsed_date = datum[7], datum[12]
+			date = dateutil.parser.parse(unparsed_date).date()
+			day = date.timetuple().tm_yday
+			if doc in self.doc_id_map:
+				doc_id = self.doc_id_map[doc]
+				self.docid_date_map[doc_id] = day
 
 
 
@@ -162,5 +175,6 @@ if __name__ == "__main__":
 	test.read_data()
 	test.create_triples()
 	test.create_matrix()
+	test.create_docid_date_map()
 	
 
