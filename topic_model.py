@@ -47,7 +47,7 @@ def test_not_neg(a):
 		print("problem with " + str(a))
 		print(np.amin(a))
 
-def save_data(data, outfile, header):
+def save_data(data, header, outfile):
 	with open(outfile, 'w') as outfile:
 		writer = csv.writer(outfile, delimiter=',')
 		writer.writerow(header)
@@ -106,7 +106,7 @@ class TopicModel:
 		return np.nonzero(self.data[word, :])[0].tolist()
 
 
-	def gibbs(self, num_iterations = 5000, burn = 750, lag = 50):
+	def gibbs(self, num_iterations = 3000, burn = 750, lag = 50):
 		"""
 		input: 
 			num_iterations: number of iterations to perform the algorithm
@@ -169,7 +169,7 @@ class TopicModel:
 				self.word_top_distr[word, topic] = \
 									float(self.word_top_lag[word, topic] + self.beta) \
 										/ (self.top_lag[0,topic] + self.beta * self.num_types)
-				print("word_topic distribution: " + str(self.word_top_distr[word, topic]))
+				# print("word_topic distribution: " + str(self.word_top_distr[word, topic]))
 
 
 	def comp_doc_top(self):
@@ -206,7 +206,7 @@ class TopicModel:
 
 	def save_data(self, out_path):
 		doc_top_distr_list = self.doc_top_distr.tolist()
-		with open(out_path, 'w') as outfile:
+		with open(out_path + "_num_topics_" + str(self.num_topics) + "_docs.csv", 'w') as outfile:
 			writer = csv.writer(outfile, delimiter=',')
 			header = ["doc_id"]
 			for top in range(self.num_topics):
@@ -216,10 +216,22 @@ class TopicModel:
 			for line in doc_top_distr_list:
 				writer.writerow([counter] + line)
 				counter += 1
+		word_top_distr_list = self.word_top_distr.tolist()
+		with open(out_path + "_num_topics_" + str(self.num_topics) + "_words.csv", 'w') as outfile:
+			writer = csv.writer(outfile, delimiter=',')
+			header = ["word"]
+			for top in range(self.num_topics):
+				header.append("topic " + str(top + 1))
+			writer.writerow(header)
+			counter = 1
+			for line in doc_top_distr_list:
+				writer.writerow([self.id_word_map[counter]] + line)
+				counter += 1
+
 
 
 ##Functions
-def select_model(topics_list, data_matrix, outpath, num_iterations = 5000, burn = 750, lag = 50):
+def select_model(topics_list, data_matrix, outpath, num_iterations = 3000, burn = 750, lag = 50):
 	"""
 	Input: 
 		list of topic numbers to test
@@ -245,7 +257,7 @@ def select_model(topics_list, data_matrix, outpath, num_iterations = 5000, burn 
 ##Development Testing
 if __name__ == "__main__":
 	file_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Data/test_data/tuples_v1.csv"
-	out_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Code/topic_model_data/topic_model_data_v1.csv"
+	out_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Code/topic_model_data/topic_model"
 	stop_words_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Code/common-english-words.csv"
 
 	test = Corpus(file_path, stop_words_path)
@@ -254,15 +266,15 @@ if __name__ == "__main__":
 
 
 	#object tests
-	# topic = TopicModel(test, 3, .5)
-	# topic.gibbs(50)
-	# topic.comp_word_top()
-	# topic.comp_doc_top()
-	# topic.comp_likelihood()
-	# print "The log-likelihood is " + str(topic.log_likelihood)
-	# print "Word topic variance: " + str(np.var(topic.word_top_distr, 0))
-	# print "Word topic mean: " + str(np.mean(topic.word_top_distr, 0))
-	# topic.save_data(out_path)
+	topic = TopicModel(test, 5, .5)
+	topic.gibbs()
+	topic.comp_word_top()
+	topic.comp_doc_top()
+	topic.comp_likelihood()
+	print "The log-likelihood is " + str(topic.log_likelihood)
+	print "Word topic variance: " + str(np.var(topic.word_top_distr, 0))
+	print "Word topic mean: " + str(np.mean(topic.word_top_distr, 0))
+	topic.save_data(out_path)
 
 	#print out topic word distribution
 	#and document topic distribution matrices
@@ -297,10 +309,10 @@ if __name__ == "__main__":
 
 
 	# #model selection tests
-	topics_to_check = map(int, np.linspace(2,14, 5))
-	model_select_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Code/topic_model_data/model_selection_data_v1.csv"
-	model_select_data = select_model(topics_to_check, test, "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Code/topic_model_data/")
-	save_data(model_select_data, model_select_path, ["number of topics", "log_likelihood"])
+	# topics_to_check = map(int, np.linspace(2,14, 5))
+	# model_select_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Code/topic_model_data/model_selection_data_v1"
+	# model_select_data = select_model(topics_to_check, test, "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Code/topic_model_data/")
+	# save_data(model_select_data, ["number of topics", "log_likelihood"], model_select_path)
 
 
 
