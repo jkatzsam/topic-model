@@ -22,7 +22,7 @@ def containment(l1, l2):
 #classes
 class Corpus:
 	
-	def __init__(self, file, stop_words_file, syntax_filter = 'all'):
+	def __init__(self, file, stop_words_file, syntax_filter = "all"):
 		"""
 			input: 
 				stop_words_file: .csv of stop words to filter out
@@ -45,9 +45,8 @@ class Corpus:
 		self.word_id_map = {} #map from words to rows of matrix
 		self.num_types = 0 #vocab size of corpus
 		self.num_docs = 0 #number of documents in corpus
-		self.data_matrix = None
 		self.docid_date_map = {} #doc_id as key, date as value
-		self.syn_types = ['nsubj', 'agent', 'dobj', 'nsubjpass', 
+		self.all_syn_types = ['nsubj', 'agent', 'dobj', 'nsubjpass', 
 						'iobj', 'prep_', 'appos', 'amod', 'nn']
 		self.words_not_wanted = ["john", 
 								"kerry", 
@@ -58,15 +57,28 @@ class Corpus:
 								"cheney",
 								"mr.",
 								"w.",
-								"kittles"]
+								"kittles",
+								"%",
+								"ms.",
+								"f.",
+								"mrs."]
 		self.agent = ['nsubj', 'agent']
 		self.patient = ['dobj', 'nsubjpass', 
 						'iobj', 'prep_']
 		self.attributes = ['appos', 'amod', 'nn']
 
 		#create list of syntatic types to accept
-		self.syntax_filter = [] 
-
+		if syntax_filter == "all":
+			self.syntax_filter = self.all_syn_types
+		elif syntax_filter == "agent":
+			self.syntax_filter = self.agent
+		elif syntax_filter == "patient":
+			self.syntax_filter = self.patient
+		elif syntax_filter == "attributes":
+			self.syntax_filter = self.attributes
+		else: 
+			print "Not a valid syntax filter. \n Using all syntatic types."
+			self.syntax_filter = self.all_syn_types
 
 
 	def read_data(self):
@@ -115,13 +127,13 @@ class Corpus:
 			word_1 = tup[1].encode('ascii','ignore').lower()
 			word_2 = tup[2].encode('ascii','ignore').lower()
 
-			if word_1 not in self.words_not_wanted #check if word is not wanted and if it is a digit
-			and not word_1.isdigit():
+			if (word_1 not in self.words_not_wanted #check if word is not wanted and if it is a digit
+			and not word_1.isdigit()):
 				word_doc_list.append([word_1, doc_id, syntax_type])
 				word_doc_dict[word_1].append(doc_id)
 				doc_counter[doc_id] += 1
-			if word_2 not in self.words_not_wanted
-			and not word_2.isdigit():
+			if (word_2 not in self.words_not_wanted
+			and not word_2.isdigit()):
 				word_doc_list.append([word_2, doc_id, syntax_type])
 				word_doc_dict[word_2].append(doc_id)
 				doc_counter[doc_id] += 1
@@ -145,8 +157,9 @@ class Corpus:
 
 		for word, doc_id, syn_rel in word_doc_list:
 			#grab tuples of specific syntatic types
-			if (containment(self.syn_types, syn_rel) 
+			if (containment(self.syntax_filter, syn_rel) 
 					and word not in self.words_not_wanted):
+				print str(syn_rel)
 				self.triples.append([word, doc_id, 0])
 				word_counter[word] += 1
 				doc_counter[doc_id] += 1
@@ -208,7 +221,7 @@ if __name__ == "__main__":
 	stop_words_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Code/common-english-words.csv"
 
 
-	test = Corpus(file_path, stop_words_path)
+	test = Corpus(file_path, stop_words_path, "attributes")
 	test.read_data()
 	test.create_triples()
 	test.create_matrix()

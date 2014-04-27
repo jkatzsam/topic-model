@@ -36,7 +36,7 @@ import numpy as np
 import scipy as sp
 import csv, math
 
-#custom_modules
+#custom modules
 from create_corpus_matrix import Corpus
 
 #helper functions
