@@ -78,7 +78,7 @@ def load_dictionary(dict):
 def load_corpora(corp):
 	return gensim.corpora.MmCorpus(corp)
 
-def word_topic_matrix(model, word_num = 10):
+def word_topic_matrix(model):
 	"""
 	Input: 
 		model: ldamodel
@@ -86,52 +86,117 @@ def word_topic_matrix(model, word_num = 10):
 		topic_num: number of topics to inspect
 
 	Output:
-		dictionary with (word, topic) tuple as key and probability as value 
-		set with all the unique words
+		word topic matrix
 	"""
 	topic_num = model.num_topics
-	word_topics = model.show_topics(topics = topic_num, topn = word_num)
-	
-	#change topic_num to be the total number of topics
-	if topic_num == -1:
-		topic_num == len(word_topics)
+	word_topics = model.show_topics(topics = topic_num, topn = -1)
 
 	words_id = {}
 	id_words = {}
 	word_top = {}
 	topics = collections.defaultdict(list)
 
+	#counter for which topic we are on in loop
 	top_counter = 0
-	word_id_counter = 0
+	#dictionary of words and ids
+	id2word = model.id2word.token2id
+	all_word_num = len(id2word)
+	word_top_mat = np.zeros((all_word_num, topic_num))
+
 	for top in word_topics:
 		for word_prob in top.split(" + "):
 			word = word_prob.split("*")[1]
 			prob = word_prob.split("*")[0]
 
-			word_top[(word, top_counter)] = float(prob)
-			topics[top_counter].append(word)
-			if word not in words_id:
-				words_id[word] = word_id_counter
-				id_words[word_id_counter] = word
-				word_id_counter += 1
+			print "word: " + str(word)
+
+			word_id = id2word[word]
+
+			print "word_id: " + str(word_id)
+
+			print "prob: " + str(prob)
+
+			word_top_mat[word_id, top_counter] =  float(prob)
 		top_counter += 1
 
-	#create matrix
-	#TODO: why are there some columns with less than 10 nonzero entries?
-	all_word_num = len(words_id)
-	word_top_mat = np.zeros((all_word_num, topic_num))
-	for top in range(topic_num):
-		words = topics[top]
-		print len(words)
-		for word in words:
-			#grab probability of word in topic
-			prob = word_top[(word, top)]
-			#grab id for word
-			word_id = words_id[word]
-			#create slot for matrix
-			word_top_mat[word_id, top] = prob
-			# print "added to matrix"
-	return word_top_mat, id_words
+	return word_top_mat
+
+def comp_prob_top(word_top_mat):
+	p_t = np.sum(word_top_mat, 0)
+	return p_t / np.sum(p_t)
+
+def comp_saliency(word_top_mat):
+	"""
+	Input:
+		word_top_mat: term topic matrix
+
+	Output:
+		vector of the saliency of each word
+	"""
+
+	#compute p(w)
+	p_w_unnormalized = np.sum(word_top_mat, 1) 
+
+	p_w = p_w_unnormalized / np.sum(p_w_unnormalized)
+
+	#compute distinctiveness of word
+	p_t = comp_prob_top(word_top_mat)
+	dist = np.sum(word_top_mat * np.log(np.divide(word_top_mat, p_t) + .0001), 1)
+
+	return p_w * dist
+
+
+def dist_from_uniform(word_top_mat):
+	"""
+	Input: 
+		word_top_mat: term topic matrix
+
+	Output:
+		vector (length of number of topics) that is distance of 
+		each topic distribution from the uniform distribution
+	"""
+	num_words, num_topics = word_top_mat.shape
+	#create uniform probability matrix
+	unif = np.repeat(np.array([float(1) / num_words]), num_words)
+
+	#calculate kullback keibler divergence
+	kullback = np.zeros((1, num_topics))
+	for top in range(num_topics):
+		kullback[0,top] = sp.stats.entropy(word_top_mat[:, top], unif)
+	return kullback
+
+
+def take_n_best_topics(n, word_top_mat):
+	"""
+	Input:
+		n: number of indices to output
+		word_top_mat: term topic matrix
+
+	Output:
+		returns the indices of best n topics
+	"""
+	scores = dist_from_uniform(word_top_mat)
+	ranking = np.argsort(scores)
+	best = ranking[0, -n:]
+	return word_top_mat[:, best]
+
+def take_n_best_words(n, word_top_mat):
+	"""
+	Input:
+		n: number of indices to output
+		word_top_mat: term topic matrix
+
+	Output:
+		returns the indices of best n words per topic
+	"""
+	ranking = np.argsort(word_top_mat, 0)
+	best = ranking[-n:, :]
+
+	#grab unique indices
+	unique_best = np.unique(best)
+	return word_top_mat[unique_best, :]
+
+
 
 def save_word_topic_as_matrix(word_top_mat, id_words, file_path):
 	"""
@@ -174,6 +239,16 @@ def save_word_topic_distr(word_top_mat, id_words, file_path):
 			top_counter = 0
 
 
+def create_topic_distr(model, num_topics, num_words, file_path):
+	word_top_mat = word_topic_matrix(model)
+	word_top_mat_best_tops = take_n_best_topics(num_topics, word_top_mat)
+	word_top_mat_best = take_n_best_words(num_words, word_top_mat_best_tops)
+
+	id_words = model1.id2word.__dict__['id2token']
+
+	save_word_topic_distr(word_top_mat_best, id_words, file_path)
+
+
 
 
 #Development Testing
@@ -208,11 +283,10 @@ if __name__ == "__main__":
 	#model
 	model1 = gensim.models.ldamodel.LdaModel(corp, id2word=diction, num_topics=150)
 
-	word_top_mat, id_words = word_topic_matrix(model1, word_num = 2)
-
 	#save results
 	top_words_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Code/gen_sim_data/top_words.csv"
-	save_word_topic_distr(word_top_mat, id_words, top_words_path)
+
+	create_topic_distr(model1, 30, 5, top_words_path)
 
 	# #model
 	# model2 = gensim.models.hdpmodel.HdpModel(corp, id2word=diction)
