@@ -7,7 +7,7 @@ a corpus.
 """
 
 #third party modules
-import gensim, collections, csv
+import gensim, collections, csv, scipy.stats
 
 import numpy as np
 import scipy as sp
@@ -180,7 +180,7 @@ def take_n_best_topics(n, word_top_mat):
 	best = ranking[0, -n:]
 	return word_top_mat[:, best]
 
-def take_n_best_words(n, word_top_mat):
+def find_n_best_words(n, word_top_mat):
 	"""
 	Input:
 		n: number of indices to output
@@ -192,11 +192,99 @@ def take_n_best_words(n, word_top_mat):
 	ranking = np.argsort(word_top_mat, 0)
 	best = ranking[-n:, :]
 
-	#grab unique indices
-	unique_best = np.unique(best)
-	return word_top_mat[unique_best, :]
+	return np.unique(best)
+
+def retain_n_best_words(best_indices, word_top_mat):
+	"""
+	Input:
+		best_indices: indices of the words to retain
+		word_top_mat: term topic matrix
+
+	Output:
+		returns the indices of best n words per topic
+	"""
+	return word_top_mat[best_indices, :]
+
+def obtain_new_word_ids(indices, model):
+	"""
+	Input:
+		indices: indices of the words to retain
+		model: the model generated from gensim
+
+	Output:
+		returns a dictionary from numbers (row number of matrix)
+		to words (word that row corresponds to)
+	"""
+	id_words = model.id2word.__dict__['id2token']
+	
+	new_ids = {}
+	index_counter = 0
+	if type(indices) is not list:
+		for index in indices.tolist():
+			word = id_words[index]
+			new_ids[index_counter] = index
+			index_counter += 1
+		return new_ids
+	elif type(indices) is list:
+		for index in indices:
+			word = id_words[index]
+			new_ids[index_counter] = index
+			index_counter += 1
+		return new_ids
 
 
+def order_words_vis(word_top_mat):
+	
+	num_words, num_topics = word_top_mat.shape
+	ordered_words = []
+	words_included = set()
+	word_top_mat_t = word_top_mat.T.copy()
+	new_nonzero_elements = []
+	while len(ordered_words) < num_words and \
+		(ordered_words == [] or new_nonzero_elements != old_nonzero_elements):
+
+		# print "dimensions of matrix: " + str(word_top_mat_t.shape)
+
+		old_nonzero_elements = new_nonzero_elements
+
+		#calculate means ignoring 0s
+		means = np.array([np.mean([x for x in s if x]) for s in word_top_mat_t])
+
+		try:	
+			topic = np.nanargmax(means)
+		except:
+			break
+
+
+		# print "max mean: " + str(np.nanmax(means))
+		# print "max topic: " + str(topic)
+		# print "nonzero means: " + str(means[np.nonzero(means)[0]])
+
+		#grab non_zero_elements and add if not already included
+		new_nonzero_elements = np.nonzero(word_top_mat[:, topic])[0].tolist()
+		elements_to_add = [x for x in new_nonzero_elements if x not in words_included]
+
+		#update order of words and words already included lists
+		ordered_words.extend(elements_to_add)
+		words_included.update(elements_to_add)
+
+
+		#delete words already counted from matrix
+		word_top_mat_t[:, new_nonzero_elements] = np.zeros((num_topics, len(new_nonzero_elements)))
+
+		# print "new matrix segment : " + str(word_top_mat_t[:, new_nonzero_elements])
+
+		# print "condition 1: " + str(len(ordered_words) < num_words)
+		# print new_nonzero_elements
+		# print old_nonzero_elements
+	if len(ordered_words) < num_words: 
+		set_ordered_words = set(ordered_words)
+		all_words = set(range(num_words))
+		remain = all_words.difference(set_ordered_words)
+		ordered_words.extend(list(remain))
+		return ordered_words
+	else:
+		return ordered_words
 
 def save_word_topic_as_matrix(word_top_mat, id_words, file_path):
 	"""
@@ -241,12 +329,40 @@ def save_word_topic_distr(word_top_mat, id_words, file_path):
 
 def create_topic_distr(model, num_topics, num_words, file_path):
 	word_top_mat = word_topic_matrix(model)
+
+	print "final matrix sum: " + str(np.sum(word_top_mat))
+
 	word_top_mat_best_tops = take_n_best_topics(num_topics, word_top_mat)
-	word_top_mat_best = take_n_best_words(num_words, word_top_mat_best_tops)
 
-	id_words = model1.id2word.__dict__['id2token']
+	print "final matrix sum: " + str(np.sum(word_top_mat_best_tops))
+	
+	#grab indices of words to retain
+	best_indices = find_n_best_words(num_words, word_top_mat_best_tops)
 
-	save_word_topic_distr(word_top_mat_best, id_words, file_path)
+	#obtain new word_ids for downsized matrix
+	new_ids = obtain_new_word_ids(best_indices, model)
+
+	# print "new_ids: " + str(new_ids)
+
+	#change matrix
+	word_top_mat_best = retain_n_best_words(best_indices, word_top_mat_best_tops)
+
+	print "final matrix sum: " + str(np.sum(word_top_mat_best))
+
+	#find best ordering of words visualization
+	vis_ordering = order_words_vis(word_top_mat_best)
+
+	# print "vis_ordering: " + str(vis_ordering)
+
+	#obtain new word_ids for visualization
+	vis_ids = obtain_new_word_ids(vis_ordering, model)
+
+	# print "vis_ids: " + str(vis_ids) 
+
+	#save data
+	save_word_topic_distr(word_top_mat_best, vis_ids, file_path)
+
+	print "final matrix sum: " + str(np.sum(word_top_mat_best))
 
 
 
@@ -282,6 +398,9 @@ if __name__ == "__main__":
 
 	#model
 	model1 = gensim.models.ldamodel.LdaModel(corp, id2word=diction, num_topics=150)
+
+	#create matrix for testing
+	word_top_mat = word_topic_matrix(model1)
 
 	#save results
 	top_words_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Code/gen_sim_data/top_words.csv"
