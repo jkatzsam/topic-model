@@ -205,7 +205,7 @@ def retain_n_best_words(best_indices, word_top_mat):
 	"""
 	return word_top_mat[best_indices, :]
 
-def obtain_new_word_ids(indices, model):
+def obtain_new_word_ids(indices, old_ids):
 	"""
 	Input:
 		indices: indices of the words to retain
@@ -215,22 +215,19 @@ def obtain_new_word_ids(indices, model):
 		returns a dictionary from numbers (row number of matrix)
 		to words (word that row corresponds to)
 	"""
-	id_words = model.id2word.__dict__['id2token']
-	
+	#get correspondence between numbering and new ids
 	new_ids = {}
 	index_counter = 0
 	if type(indices) is not list:
 		for index in indices.tolist():
-			word = id_words[index]
-			new_ids[index_counter] = index
+			new_ids[index_counter] = old_ids[index]
 			index_counter += 1
 		return new_ids
 	elif type(indices) is list:
 		for index in indices:
-			word = id_words[index]
-			new_ids[index_counter] = index
+			new_ids[index_counter] = old_ids[index]
 			index_counter += 1
-		return new_ids
+	return new_ids
 
 
 def order_words_vis(word_top_mat):
@@ -286,6 +283,19 @@ def order_words_vis(word_top_mat):
 	else:
 		return ordered_words
 
+def permuted_matrix(word_top_mat, ordering):
+	num_words, num_topics = word_top_mat.shape
+
+	#allocate space for new matrix
+	new_matrix = np.zeros((num_words, num_topics))
+
+	row_counter = 0
+	for row in ordering:
+		new_matrix[row_counter, :] = word_top_mat[row, :]
+		row_counter += 1
+
+	return new_matrix
+
 def save_word_topic_as_matrix(word_top_mat, id_words, file_path):
 	"""
 	Input:
@@ -340,9 +350,10 @@ def create_topic_distr(model, num_topics, num_words, file_path):
 	best_indices = find_n_best_words(num_words, word_top_mat_best_tops)
 
 	#obtain new word_ids for downsized matrix
-	new_ids = obtain_new_word_ids(best_indices, model)
+	model_ids = model.__dict__['id2word']
+	new_ids = obtain_new_word_ids(best_indices, model_ids)
 
-	# print "new_ids: " + str(new_ids)
+	print "new_ids: " + str(new_ids)
 
 	#change matrix
 	word_top_mat_best = retain_n_best_words(best_indices, word_top_mat_best_tops)
@@ -352,17 +363,20 @@ def create_topic_distr(model, num_topics, num_words, file_path):
 	#find best ordering of words visualization
 	vis_ordering = order_words_vis(word_top_mat_best)
 
-	# print "vis_ordering: " + str(vis_ordering)
+	print "vis_ordering: " + str(vis_ordering)
+
+	#permute matrix according to new order
+	final_mat = permuted_matrix(word_top_mat_best, vis_ordering)
 
 	#obtain new word_ids for visualization
-	vis_ids = obtain_new_word_ids(vis_ordering, model)
+	vis_ids = obtain_new_word_ids(vis_ordering, new_ids)
 
 	# print "vis_ids: " + str(vis_ids) 
 
 	#save data
-	save_word_topic_distr(word_top_mat_best, vis_ids, file_path)
+	save_word_topic_distr(final_mat, vis_ids, file_path)
 
-	print "final matrix sum: " + str(np.sum(word_top_mat_best))
+	print "final matrix sum: " + str(np.sum(final_mat))
 
 
 
@@ -405,7 +419,7 @@ if __name__ == "__main__":
 	#save results
 	top_words_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Code/gen_sim_data/top_words.csv"
 
-	create_topic_distr(model1, 30, 5, top_words_path)
+	create_topic_distr(model1, 15, 5, top_words_path)
 
 	# #model
 	# model2 = gensim.models.hdpmodel.HdpModel(corp, id2word=diction)
