@@ -7,7 +7,7 @@ a corpus.
 """
 
 #third party modules
-import gensim, collections, csv, scipy.stats
+import gensim, collections, csv, scipy.stats, argparse
 
 import numpy as np
 import scipy as sp
@@ -42,16 +42,25 @@ def write_rep(dic, file):
 		File to write
 
 	Output:
-		Return nothing
+		Return dictionary of line_num, doc_id
 
 		Writes file where each line belongs to particular
 		key in dictionary.
 	"""
+	line_doc_map = {}
+	line = 0
 	with open(file, 'w') as outfile:
 		for doc, words in dic.iteritems():
+
+			#keep track of line of doc
+			line_doc_map[line] = doc
+			line += 1
+
 			for word in words:
 				outfile.write(str(word) + ' ')
 			outfile.write('\n')
+
+	return line_doc_map
 
 #TODO: Maybe save corpus and dictionary, esp. if they take a while to make
 
@@ -329,7 +338,7 @@ def save_word_topic_distr(word_top_mat, id_words, file_path):
 		header = ["words", "topic", "probability"]
 		writer.writerow(header)
 		for row in range(num_rows):
-			probs = word_top_mat[row,:].tolist()
+			probs = word_top_mat[row, :].tolist()
 			top_counter = 0
 			for prob in probs:
 				writer.writerow([id_words[row], top_counter, prob])
@@ -379,14 +388,61 @@ def create_topic_distr(model, num_topics, num_words, file_path):
 	print "final matrix sum: " + str(np.sum(final_mat))
 
 
+def create_doc_top_rep(model, corpus, doc_line_map, topic_num, triple_rep):
+	"""
+	input:
+		model: lda model
+		corpus: corpus for gensim
+		doc_line_map: doc_id to line in representaiton mapping
+
+	output:
+		list of lists: documents as distribution of topics and the doc_id
+	"""
+
+	top_distr = model[corpus]
+
+	new_rep = []
+	line = 0
+	for doc in top_distr:
+		#grab doc_id
+		doc_title = doc_line_map[line]
+		doc_id = triple_rep.doc_id_map[doc_title]
+		line += 1
+
+		#create list
+		new_doc = [0]*topic_num
+
+		for top, prob in doc:
+			new_doc[top] = prob
+
+		new_rep.append([doc_id] + new_doc)
+
+	return new_rep
+
+
 
 
 #Development Testing
 if __name__ == "__main__":
+	#parse arguments to get year and keywords
+	parser = argparse.ArgumentParser(description='Process year and a list of keywords')
+	parser.add_argument('topic_num', metavar='topic_num', type=int, nargs=1,
+						help='number of topics')
+	parser.add_argument('syntax_filter', metavar='syntax_filter', type=str, nargs=1,
+						help='The syntactic relations to include')
+
+	args = parser.parse_args()
+	topic_num = args.topic_num[0]
+	syntax_filter = args.syntax_filter[0]
+
+	print "topic_num: " + str(topic_num)
+	print "syntax_filter: " + str(syntax_filter)
+
+	#paths
 	file_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Data/test_data/tuples_v1.csv"
 	stop_words_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Code/common-english-words.csv"
 
-	test = Corpus(file_path, stop_words_path)
+	test = Corpus(file_path, stop_words_path, syntax_filter)
 	test.read_data()
 	test.create_triples()
 
@@ -400,7 +456,7 @@ if __name__ == "__main__":
 	new_rep = create_new_doc_rep(tuples)
 
 	#save rep file
-	write_rep(new_rep, rep_path)
+	doc_line_map = write_rep(new_rep, rep_path)
 	dic = create_corpus_dictionary(rep_path, dictionary_path)
 	create_corpus(dic, rep_path, corpora_path)
 
@@ -411,16 +467,30 @@ if __name__ == "__main__":
 	corp = load_corpora(corpora_path)
 
 	#model
-	model1 = gensim.models.ldamodel.LdaModel(corp, id2word=diction, num_topics=150)
+	model1 = gensim.models.ldamodel.LdaModel(corp, id2word=diction, num_topics=topic_num, iterations = 500)
 
 	#create matrix for testing
 	word_top_mat = word_topic_matrix(model1)
 
 	#save results
-	top_words_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Code/gen_sim_data/top_words.csv"
+	top_words_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Code/gen_sim_data/top_words_" + \
+					str(syntax_filter) + "_" + str(topic_num) + ".csv"
 
 	create_topic_distr(model1, 15, 5, top_words_path)
 
-	# #model
-	# model2 = gensim.models.hdpmodel.HdpModel(corp, id2word=diction)
+	#create representation of documents as distributions of topics
+	new_rep = create_doc_top_rep(model1, corp, doc_line_map, topic_num, test)
+
+	#save new rep
+	top_doc_path = "/Users/jkatzsamuels/Desktop/Courses/Natural Language Processing/Project/Code/gen_sim_data/top_doc_" + \
+					str(syntax_filter) + "_" + str(topic_num) + ".csv"
+
+	with open(top_doc_path, 'w') as ofile:
+		writer = csv.writer(ofile)
+
+		#create header
+		header = ["doc_id"] + ["topic " + str(i) for i in range(topic_num)]
+		writer.writerow(header)
+		for row in new_rep:
+			writer.writerow(row)
 
